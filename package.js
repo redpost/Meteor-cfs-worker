@@ -8,6 +8,8 @@ Package.on_use(function(api) {
 
   api.use(['underscore', 'livedata', 'mongo-livedata', 'power-queue']);
 
+  api.use(['random'], 'server');
+
   api.add_files([
     'fileWorker.js'
   ], 'server');
