@@ -29,14 +29,19 @@ FS.FileWorker.observe = function(fsCollection) {
       }
     }).observe({
       added: function(fsFile) {
-        // added will catch fresh files
-        FS.debug && console.log("FileWorker ADDED - calling saveCopy", storeName, "for", fsFile._id);
-        saveCopy(fsFile, storeName);
+        // don't observe if from a different Tempstore
+        if ( (FS.TempStore.Storage && FS.TempStore.Storage.name ) && ( FS.TempStore.Storage.name === fsFile.metadata.tempStoreName ) ) {
+          // added will catch fresh files
+          FS.debug && console.log("FileWorker ADDED - calling saveCopy", storeName, "for", fsFile._id);
+          saveCopy(fsFile, storeName);
+        }
       },
       changed: function(fsFile) {
-        // changed will catch failures and retry them
-        FS.debug && console.log("FileWorker CHANGED - calling saveCopy", storeName, "for", fsFile._id);
-        saveCopy(fsFile, storeName);
+        if ( (FS.TempStore.Storage && FS.TempStore.Storage.name ) && ( FS.TempStore.Storage.name === fsFile.metadata.tempStoreName ) ) {
+          // changed will catch failures and retry them
+          FS.debug && console.log("FileWorker CHANGED - calling saveCopy", storeName, "for", fsFile._id);
+          saveCopy(fsFile, storeName);
+        }
       }
     });
   });
@@ -45,8 +50,10 @@ FS.FileWorker.observe = function(fsCollection) {
   // any temp files
   fsCollection.files.find(getDoneQuery(fsCollection.options.stores)).observe({
     added: function(fsFile) {
-      FS.debug && console.log("FileWorker ADDED - calling deleteChunks for", fsFile._id);
-      FS.TempStore.removeFile(fsFile);
+      if ( (FS.TempStore.Storage && FS.TempStore.Storage.name ) && ( FS.TempStore.Storage.name === fsFile.metadata.tempStoreName ) ) {
+        FS.debug && console.log("FileWorker ADDED - calling deleteChunks for", fsFile._id);
+        FS.TempStore.removeFile(fsFile);
+      }
     }
   });
 
@@ -54,13 +61,15 @@ FS.FileWorker.observe = function(fsCollection) {
   // removing the data from all stores as well
   fsCollection.files.find().observe({
     removed: function(fsFile) {
-      FS.debug && console.log('FileWorker REMOVED - removing all stored data for', fsFile._id);
-      //remove from temp store
-      FS.TempStore.removeFile(fsFile);
-      //delete from all stores
-      FS.Utility.each(fsCollection.options.stores, function(storage) {
-        storage.adapter.remove(fsFile);
-      });
+      if ( (FS.TempStore.Storage && FS.TempStore.Storage.name ) && ( FS.TempStore.Storage.name === fsFile.metadata.tempStoreName ) ) {
+        FS.debug && console.log('FileWorker REMOVED - removing all stored data for', fsFile._id);
+        //remove from temp store
+        FS.TempStore.removeFile(fsFile);
+        //delete from all stores
+        FS.Utility.each(fsCollection.options.stores, function(storage) {
+          storage.adapter.remove(fsFile);
+        });
+      }
     }
   });
 };
